@@ -48,9 +48,28 @@ Required environment variables:
 - `PRIVY_APP_SECRET`: Your Privy app secret
 - `AUTHORIZATION_KEY`: Server-side authorization key for API routes
 - `DATABASE_URL`: Path to SQLite database
-- `NEXT_PUBLIC_CONTRACT_ADDRESS`: Savings circle contract address
+- `NEXT_PUBLIC_CONTRACT_ADDRESS`: Savings circle contract address (deploy with `npm run compile` then `npm run deploy`)
 - `NEXT_PUBLIC_ALLOWED_NETWORK`: Allowed network (base-sepolia)
 - `CRON_SECRET`: Secret for cron endpoint authentication
+- `PRIVATE_KEY`: Wallet private key for deployment
+- `BASE_SEPOLIA_RPC_URL`: Base Sepolia RPC URL
+
+## Deploying the Contract
+
+1. Compile the contract:
+```bash
+npm run compile
+```
+
+2. Deploy to Base Sepolia:
+```bash
+npm run deploy
+```
+
+3. After deployment, update `.env.local` with the deployed contract address:
+```
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
+```
 
 3. Run the development server:
 ```bash
@@ -62,6 +81,10 @@ npm run dev
 ## Project Structure
 
 ```
+contracts/
+  SavingsCircle.sol    - On-chain savings circle contract
+scripts/
+  deploy.ts            - Hardhat deployment script
 app/
   layout.tsx          - PrivyProvider wrapper
   page.tsx            - Landing/dashboard

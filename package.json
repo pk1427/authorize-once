@@ -9,7 +9,9 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:init": "tsx lib/db/init.ts",
-    "cron:contribute": "tsx lib/cron/contribute.ts"
+    "cron:contribute": "tsx lib/cron/contribute.ts",
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.ts --network base-sepolia"
   },
   "dependencies": {
     "next": "14.2.3",
@@ -31,6 +33,11 @@
     "tailwindcss": "^3.4.1",
     "tsx": "^4.7.0",
     "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.3"
+    "eslint-config-next": "14.2.3",
+    "hardhat": "^2.22.0",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@typechain/hardhat": "^9.0.0",
+    "typechain": "^8.3.0",
+    "dotenv": "^16.3.1"
   }
 }
