@@ -12,8 +12,12 @@ export function isPolicyActive(): boolean {
   return new Date() < POLICY.expiresAt
 }
 
-export function validatePolicy(contractAddress: string, amount: string, network: string): { valid: boolean; reason?: string } {
+export function validatePolicy(contractAddress: string, amount: string, network: string, expiresAt?: Date): { valid: boolean; reason?: string } {
   if (!isPolicyActive()) {
+    return { valid: false, reason: 'Policy has expired' }
+  }
+
+  if (expiresAt && new Date() > expiresAt) {
     return { valid: false, reason: 'Policy has expired' }
   }
 

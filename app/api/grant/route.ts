@@ -14,7 +14,8 @@ export async function POST(request: Request) {
     const validation = validatePolicy(
       policy.allowedContracts[0],
       policy.maxAmount,
-      policy.allowedNetworks[0]
+      policy.allowedNetworks[0],
+      new Date(policy.expiresAt)
     )
 
     if (!validation.valid) {
