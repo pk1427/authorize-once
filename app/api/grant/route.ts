@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server'
 import { store, getActiveAuth } from '@/lib/contributions'
 import { POLICY, validatePolicy } from '@/lib/policy'
-import { getPrivyConfig, validateAuthorizationKey } from '@/lib/privy-server'
 
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !validateAuthorizationKey(authHeader.replace('Bearer ', ''))) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const body = await request.json()
     const { memberAddress, policy } = body
 
@@ -57,11 +51,6 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !validateAuthorizationKey(authHeader.replace('Bearer ', ''))) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const body = await request.json()
     const { memberAddress } = body
 

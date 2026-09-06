@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { usePrivy, useWallets } from '@privy-io/react-auth'
+import { usePrivy, useWallets, useDelegatedActions } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { POLICY, isPolicyActive, validatePolicy } from '@/lib/policy'
@@ -11,6 +11,7 @@ import { store, getActiveAuth } from '@/lib/contributions'
 export default function JoinPage() {
   const { authenticated, user, ready, login } = usePrivy()
   const { wallets } = useWallets()
+  const { delegateWallet } = useDelegatedActions()
   const router = useRouter()
   const [step, setStep] = useState<'intro' | 'review' | 'granting' | 'complete'>('intro')
   const [accepted, setAccepted] = useState(false)
@@ -45,6 +46,11 @@ export default function JoinPage() {
     try {
       const wallet = wallets[0]
       if (!wallet) throw new Error('No wallet connected')
+
+      await delegateWallet({
+        address: wallet.address,
+        chainType: 'ethereum',
+      })
 
       const response = await fetch('/api/grant', {
         method: 'POST',
