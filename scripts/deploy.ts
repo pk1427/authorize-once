@@ -1,7 +1,7 @@
-import { ethers } from 'ethers'
-import { SavingsCircle } from '../typechain-types'
-import * as fs from 'fs'
-import * as path from 'path'
+require('dotenv').config({ path: '.env.local' })
+const { ethers } = require('ethers')
+const fs = require('fs')
+const path = require('path')
 
 async function main() {
   const privateKey = process.env.PRIVATE_KEY
@@ -22,18 +22,10 @@ async function main() {
     throw new Error('Insufficient balance. You need at least 0.01 ETH to deploy.')
   }
 
-  const contractArtifact = JSON.parse(
-    fs.readFileSync(
-      path.join(__dirname, '../artifacts/contracts/SavingsCircle.sol/SavingsCircle.json'),
-      'utf8'
-    )
-  )
+  const artifactPath = path.join(__dirname, '../artifacts/contracts/SavingsCircle.sol/SavingsCircle.json')
+  const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'))
 
-  const factory = new ethers.ContractFactory(
-    contractArtifact.abi,
-    contractArtifact.bytecode,
-    wallet
-  )
+  const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet)
 
   console.log('Deploying SavingsCircle contract...')
   const contract = await factory.deploy()
