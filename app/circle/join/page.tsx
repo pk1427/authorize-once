@@ -20,6 +20,7 @@ export default function JoinPage() {
   const [error, setError] = useState<string | null>(null)
 
   const privyWallet = user?.wallet?.address ? { address: user.wallet.address } : activeWallet
+  const isEmbedded = activeWallet?.walletClientType === 'privy'
 
   useEffect(() => {
     if (!ready) return
@@ -28,8 +29,8 @@ export default function JoinPage() {
       return
     }
 
-    if (!privyWallet) {
-      setStep('connect-wallet')
+    if (!privyWallet || !isEmbedded) {
+      setStep('create-wallet')
       return
     }
 
@@ -41,7 +42,7 @@ export default function JoinPage() {
     }
 
     setStep('review')
-  }, [authenticated, ready, privyWallet, router])
+  }, [authenticated, ready, privyWallet, isEmbedded, router])
 
   const handleGrant = async () => {
     if (!accepted) {
@@ -53,41 +54,18 @@ export default function JoinPage() {
     setError(null)
 
     try {
-      let targetWallet = privyWallet
+      if (!privyWallet) throw new Error('No wallet available')
 
-      if (!targetWallet) {
-        throw new Error('No wallet available')
-      }
-
-      try {
-        await delegateWallet({
-          address: targetWallet.address,
-          chainType: 'ethereum',
-        })
-      } catch (delegateError) {
-        const message = delegateError instanceof Error ? delegateError.message : ''
-        if (message.includes('not associated with current user')) {
-          try {
-            const created = await createWallet()
-            if (!created) throw new Error('Wallet creation failed')
-            targetWallet = { address: created.address }
-            await delegateWallet({
-              address: targetWallet.address,
-              chainType: 'ethereum',
-            })
-          } catch (createError) {
-            throw new Error('Unable to create a delegatable embedded wallet. Please try again.')
-          }
-        } else {
-          throw delegateError
-        }
-      }
+      await delegateWallet({
+        address: privyWallet.address,
+        chainType: 'ethereum',
+      })
 
       const response = await fetch('/api/grant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          memberAddress: targetWallet.address,
+          memberAddress: privyWallet.address,
           policy: POLICY,
         }),
       })
