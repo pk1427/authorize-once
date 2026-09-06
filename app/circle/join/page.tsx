@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { usePrivy, useWallets, useDelegatedActions, useConnectWallet, useActiveWallet } from '@privy-io/react-auth'
+import { usePrivy, useDelegatedActions, useConnectWallet, useActiveWallet, useCreateWallet } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { POLICY, isPolicyActive, validatePolicy } from '@/lib/policy'
@@ -10,16 +10,16 @@ import { store, getActiveAuth } from '@/lib/contributions'
 
 export default function JoinPage() {
   const { authenticated, user, ready, login } = usePrivy()
-  const { wallets } = useWallets()
   const { delegateWallet } = useDelegatedActions()
   const { connectWallet } = useConnectWallet()
   const { wallet: activeWallet } = useActiveWallet()
+  const { createWallet } = useCreateWallet()
   const router = useRouter()
-  const [step, setStep] = useState<'intro' | 'connect-wallet' | 'review' | 'granting' | 'complete'>('intro')
+  const [step, setStep] = useState<'intro' | 'connect-wallet' | 'create-wallet' | 'review' | 'granting' | 'complete'>('intro')
   const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const wallet = wallets[0] || activeWallet
+  const privyWallet = user?.wallet?.address ? { address: user.wallet.address } : activeWallet
 
   useEffect(() => {
     if (!ready) return
@@ -28,12 +28,12 @@ export default function JoinPage() {
       return
     }
 
-    if (!wallet) {
+    if (!privyWallet) {
       setStep('connect-wallet')
       return
     }
 
-    const address = wallet.address
+    const address = privyWallet.address
     const existingAuth = getActiveAuth(address)
     if (existingAuth) {
       router.push('/circle')
@@ -41,7 +41,7 @@ export default function JoinPage() {
     }
 
     setStep('review')
-  }, [authenticated, ready, wallet, router])
+  }, [authenticated, ready, privyWallet, router])
 
   const handleGrant = async () => {
     if (!accepted) {
@@ -53,18 +53,41 @@ export default function JoinPage() {
     setError(null)
 
     try {
-      if (!wallet) throw new Error('No wallet connected')
+      let targetWallet = privyWallet
 
-      await delegateWallet({
-        address: wallet.address,
-        chainType: 'ethereum',
-      })
+      if (!targetWallet) {
+        throw new Error('No wallet available')
+      }
+
+      try {
+        await delegateWallet({
+          address: targetWallet.address,
+          chainType: 'ethereum',
+        })
+      } catch (delegateError) {
+        const message = delegateError instanceof Error ? delegateError.message : ''
+        if (message.includes('not associated with current user')) {
+          try {
+            const created = await createWallet()
+            if (!created) throw new Error('Wallet creation failed')
+            targetWallet = { address: created.address }
+            await delegateWallet({
+              address: targetWallet.address,
+              chainType: 'ethereum',
+            })
+          } catch (createError) {
+            throw new Error('Unable to create a delegatable embedded wallet. Please try again.')
+          }
+        } else {
+          throw delegateError
+        }
+      }
 
       const response = await fetch('/api/grant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          memberAddress: wallet.address,
+          memberAddress: targetWallet.address,
           policy: POLICY,
         }),
       })
@@ -132,7 +155,7 @@ export default function JoinPage() {
         <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 space-y-6">
           <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isStep('intro') ? 'bg-primary text-white' : 'bg-slate-700 text-gray-400'}`}>1</div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isStep('connect-wallet') ? 'bg-primary text-white' : 'bg-slate-700 text-gray-400'}`}>2</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isStep('connect-wallet') || isStep('create-wallet') ? 'bg-primary text-white' : 'bg-slate-700 text-gray-400'}`}>2</div>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isStep('review') || isStep('granting') || isStep('complete') ? 'bg-primary text-white' : 'bg-slate-700 text-gray-400'}`}>3</div>
           </div>
 
@@ -171,6 +194,25 @@ export default function JoinPage() {
               </p>
               <button onClick={() => connectWallet()} className="w-full px-6 py-3 bg-primary hover:bg-primary/80 rounded-lg font-semibold transition-colors">
                 Connect Wallet
+              </button>
+            </div>
+          )}
+
+          {isStep('create-wallet') && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold">Create Wallet</h2>
+              <p className="text-gray-300">
+                Create an embedded wallet to enable automatic contributions. This wallet is managed by Privy and can be delegated to the app.
+              </p>
+              <button onClick={async () => {
+                try {
+                  await createWallet()
+                  setStep('review')
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Failed to create wallet')
+                }
+              }} className="w-full px-6 py-3 bg-primary hover:bg-primary/80 rounded-lg font-semibold transition-colors">
+                Create Wallet
               </button>
             </div>
           )}
@@ -220,7 +262,7 @@ export default function JoinPage() {
               )}
 
               <div className="flex gap-4">
-                <button onClick={() => setStep('connect-wallet')} className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold transition-colors">
+                <button onClick={() => setStep('create-wallet')} className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold transition-colors">
                   Back
                 </button>
                 <button onClick={handleGrant} disabled={!accepted || isStep('granting')} className="flex-1 px-6 py-3 bg-primary hover:bg-primary/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors">
