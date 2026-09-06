@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { usePrivy, useWallets, useDelegatedActions, useConnectWallet } from '@privy-io/react-auth'
+import { usePrivy, useWallets, useDelegatedActions, useConnectWallet, useActiveWallet } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { POLICY, isPolicyActive, validatePolicy } from '@/lib/policy'
@@ -13,10 +13,13 @@ export default function JoinPage() {
   const { wallets } = useWallets()
   const { delegateWallet } = useDelegatedActions()
   const { connectWallet } = useConnectWallet()
+  const { wallet: activeWallet } = useActiveWallet()
   const router = useRouter()
   const [step, setStep] = useState<'intro' | 'connect-wallet' | 'review' | 'granting' | 'complete'>('intro')
   const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const wallet = wallets[0] || activeWallet
 
   useEffect(() => {
     if (!ready) return
@@ -25,7 +28,6 @@ export default function JoinPage() {
       return
     }
 
-    const wallet = wallets[0]
     if (!wallet) {
       setStep('connect-wallet')
       return
@@ -35,8 +37,11 @@ export default function JoinPage() {
     const existingAuth = getActiveAuth(address)
     if (existingAuth) {
       router.push('/circle')
+      return
     }
-  }, [authenticated, ready, wallets, router])
+
+    setStep('review')
+  }, [authenticated, ready, wallet, router])
 
   const handleGrant = async () => {
     if (!accepted) {
@@ -48,7 +53,6 @@ export default function JoinPage() {
     setError(null)
 
     try {
-      const wallet = wallets[0]
       if (!wallet) throw new Error('No wallet connected')
 
       await delegateWallet({
