@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { usePrivy, useWallets, useDelegatedActions } from '@privy-io/react-auth'
+import { usePrivy, useWallets, useDelegatedActions, useConnectWallet } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { POLICY, isPolicyActive, validatePolicy } from '@/lib/policy'
@@ -12,8 +12,9 @@ export default function JoinPage() {
   const { authenticated, user, ready, login } = usePrivy()
   const { wallets } = useWallets()
   const { delegateWallet } = useDelegatedActions()
+  const { connectWallet } = useConnectWallet()
   const router = useRouter()
-  const [step, setStep] = useState<'intro' | 'review' | 'granting' | 'complete'>('intro')
+  const [step, setStep] = useState<'intro' | 'connect-wallet' | 'review' | 'granting' | 'complete'>('intro')
   const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,7 +26,10 @@ export default function JoinPage() {
     }
 
     const wallet = wallets[0]
-    if (!wallet) return
+    if (!wallet) {
+      setStep('connect-wallet')
+      return
+    }
 
     const address = wallet.address
     const existingAuth = getActiveAuth(address)
@@ -124,8 +128,8 @@ export default function JoinPage() {
         <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8 space-y-6">
           <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isStep('intro') ? 'bg-primary text-white' : 'bg-slate-700 text-gray-400'}`}>1</div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isStep('review') ? 'bg-primary text-white' : 'bg-slate-700 text-gray-400'}`}>2</div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isStep('granting') || isStep('complete') ? 'bg-primary text-white' : 'bg-slate-700 text-gray-400'}`}>3</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isStep('connect-wallet') ? 'bg-primary text-white' : 'bg-slate-700 text-gray-400'}`}>2</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isStep('review') || isStep('granting') || isStep('complete') ? 'bg-primary text-white' : 'bg-slate-700 text-gray-400'}`}>3</div>
           </div>
 
           {isStep('intro') && (
@@ -149,8 +153,20 @@ export default function JoinPage() {
                   <li>Transfer any tokens other than ETH</li>
                 </ul>
               </div>
-              <button onClick={() => setStep('review')} className="w-full px-6 py-3 bg-primary hover:bg-primary/80 rounded-lg font-semibold transition-colors">
-                Review Policy
+              <button onClick={() => setStep('connect-wallet')} className="w-full px-6 py-3 bg-primary hover:bg-primary/80 rounded-lg font-semibold transition-colors">
+                Continue
+              </button>
+            </div>
+          )}
+
+          {isStep('connect-wallet') && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold">Connect Your Wallet</h2>
+              <p className="text-gray-300">
+                Connect a wallet to continue. This wallet will be used for automatic contributions.
+              </p>
+              <button onClick={() => connectWallet()} className="w-full px-6 py-3 bg-primary hover:bg-primary/80 rounded-lg font-semibold transition-colors">
+                Connect Wallet
               </button>
             </div>
           )}
@@ -200,7 +216,7 @@ export default function JoinPage() {
               )}
 
               <div className="flex gap-4">
-                <button onClick={() => setStep('intro')} className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold transition-colors">
+                <button onClick={() => setStep('connect-wallet')} className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold transition-colors">
                   Back
                 </button>
                 <button onClick={handleGrant} disabled={!accepted || isStep('granting')} className="flex-1 px-6 py-3 bg-primary hover:bg-primary/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors">
